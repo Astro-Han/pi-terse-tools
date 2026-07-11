@@ -1,0 +1,38 @@
+{
+  "name": "pi-terse-tools",
+  "version": "0.1.0",
+  "description": "Compress every pi tool call into a tight two-line block: intent on line 1, result summary on line 2.",
+  "license": "MIT",
+  "author": "astrohan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Astro-Han/pi-terse-tools.git"
+  },
+  "homepage": "https://github.com/Astro-Han/pi-terse-tools#readme",
+  "bugs": "https://github.com/Astro-Han/pi-terse-tools/issues",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "extension",
+    "developer-tools"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "extensions/index.ts",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.80.0",
+    "@earendil-works/pi-tui": ">=0.80.0"
+  }
+}
