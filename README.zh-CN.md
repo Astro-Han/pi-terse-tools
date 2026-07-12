@@ -4,11 +4,11 @@
 
 ```
 edit  确认 reasoning 能在调用时显示
-  src/index.ts → +6/-3
+  +6/-3 src/index.ts
 bash  跑类型检查
-  npx tsc --noEmit → ✓
+  ✓ npx tsc --noEmit
 read  查看模型注册表
-  docs/models.md → 24 lines
+  24 lines docs/models.md
 ```
 
 按 `C-o` 展开任意块查看完整输出、diff 或写入内容。
@@ -30,9 +30,9 @@ pi -e npm:pi-terse-tools
 pi 默认的工具输出很冗长，占满整个对话。这个扩展把七个内置工具（read、write、edit、bash、grep、find、ls）重新渲染成紧凑的两行块：
 
 - **第一行** — 工具名 + 模型提供的一句话 `reasoning`（说明为什么调用，不重复参数）。
-- **第二行** — 目标（路径、命令、模式）+ 带颜色的结果摘要（行数、匹配数、退出码、diff 计数）。
+- **第二行** — 带颜色的结果摘要（✓ / ✗ exit N / 行数 / 匹配数 / diff 计数）+ 目标（路径、命令、模式）。
 
-保留了原生工具的背景和 padding，成功（绿色）和失败（红色）状态一眼可辨。长行用省略号截断，同时保留结果尾部可见。
+保留了原生工具的背景和 padding，成功（绿色 ✓）和失败（红色 ✗）状态一眼可辨。长行用省略号截断，同时保留开头的结果摘要可见。
 
 ## reasoning 参数
 
