@@ -1,6 +1,6 @@
 {
   "name": "pi-terse-tools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Compress every pi tool call into a tight two-line block: intent on line 1, result summary on line 2.",
   "license": "MIT",
   "author": "astrohan",
