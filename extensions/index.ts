@@ -8,7 +8,7 @@ import {
 	createReadToolDefinition,
 	createWriteToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { Container, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Container, truncateToWidth } from "@earendil-works/pi-tui";
 
 const DIM = "\x1b[2m", BOLD = "\x1b[1m", GREEN = "\x1b[32m", RED = "\x1b[31m", RESET = "\x1b[22;39m";
 const INDENT = "  ";
@@ -34,11 +34,6 @@ const nonEmpty = (s: string): number => s.trim().split("\n").filter(Boolean).len
 const truncate = (text: string, width: number): string =>
 	truncateToWidth(text, width, "…").replace(/\x1b\[0m/g, RESET);
 
-function fitLine(line: string, width: number): string {
-	if (visibleWidth(line) <= width) return line;
-	return truncate(line, width);
-}
-
 class TidyBlock {
 	private readonly source: string[];
 	constructor(source: string[]) { this.source = source; }
@@ -46,7 +41,7 @@ class TidyBlock {
 	render(width: number): string[] {
 		const w = Math.max(1, width);
 		// pi-tui counts tabs as three columns.
-		return this.source.map((line) => fitLine(line.replace(/\t/g, "   "), w));
+		return this.source.map((line) => truncate(line.replace(/\t/g, "   "), w));
 	}
 }
 
