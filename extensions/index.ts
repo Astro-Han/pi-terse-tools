@@ -47,7 +47,8 @@ function fitLine(line: string, width: number): string {
 }
 
 class TidyBlock {
-	constructor(private readonly source: string[]) {}
+	private readonly source: string[];
+	constructor(source: string[]) { this.source = source; }
 	invalidate(): void {}
 	render(width: number): string[] {
 		const w = Math.max(1, width);
@@ -183,13 +184,21 @@ export default function (pi: ExtensionAPI) {
 			renderShell: "default",
 			execute: async (id: string, p: any, sig: any, up: any, ctx: any) =>
 				factory(ctx?.cwd ?? process.cwd()).execute(id, strip(p).rest, sig, up, ctx),
-			// Only one render slot owns the block.
+			// The call slot owns the running header while partial.
 			renderCall: (args: any, theme: any, ctx: any) => {
 				if (!ctx?.isPartial) return new Container();
 				return new TidyBlock(buildBlock(name, args ?? {}, {}, { partial: true }));
 			},
+			// The result slot owns the summary when done, and the expanded body
+			// (including streamed partial output) when expanded.
 			renderResult: (result: any, opts: any, theme: any, ctx: any) => {
-				if (opts?.isPartial) return new Container();
+				if (opts?.isPartial) {
+					// While partial, the call slot already shows the running header, so
+					// the result slot only contributes the streamed body when expanded.
+					if (!opts?.expanded) return new Container();
+					const { rest } = strip(ctx?.args ?? {});
+					return new TidyBlock(expandedLines(name, rest, result, ctx?.isError ?? false));
+				}
 				const err = ctx?.isError ?? false;
 				const lines = buildBlock(name, ctx?.args ?? {}, result, { err, expanded: opts?.expanded ?? false });
 				return new TidyBlock(lines);
