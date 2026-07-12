@@ -23,47 +23,59 @@ const render = (tool: any, args: any, result: any, opts: { isPartial: boolean; e
 const bashArgs = { command: "echo hi", reasoning: "greet" };
 const bashResult = (text: string) => ({ content: [{ type: "text", text }] });
 
-test("partial + expanded: running header followed by streamed body", () => {
-	// Regression for the original bug: expanding while running showed nothing.
-	const bash = register()["bash"];
-	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: true });
-	assert.equal(lines.length, 4);
-	assert.equal(lines[0], "bash greet");
-	assert.ok(lines[1].includes("running"), `expected running summary, got: ${lines[1]}`);
-	assert.deepEqual(lines.slice(2), ["  hello", "  world"]);
+test("completed bash: status leads line2, detail follows, no arrow", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["bash greet", "  ✓ echo hi"]);
 });
 
-test("partial + collapsed: only the running header", () => {
-	const bash = register()["bash"];
-	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: false });
-	assert.equal(lines.length, 2);
-	assert.ok(lines[1].includes("running"));
+test("completed bash error: ✗ leads, exit code and detail follow", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("boom\nCommand exited with code 2"), { isPartial: false, expanded: false, isError: true });
+	assert.deepEqual(lines, ["bash greet", "  ✗ exit 2 echo hi"]);
 });
 
-test("completed + expanded: summary header followed by body", () => {
-	const bash = register()["bash"];
-	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: true });
-	assert.equal(lines.length, 4);
-	assert.equal(lines[0], "bash greet");
-	assert.ok(lines[1].includes("✓"), `expected checkmark summary, got: ${lines[1]}`);
-	assert.deepEqual(lines.slice(2), ["  hello", "  world"]);
+test("completed bash without reasoning: line1 carries detail, line2 is status only", () => {
+	const lines = render(register()["bash"], { command: "echo hi" }, bashResult("hello"), { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["bash echo hi", "  ✓"]);
 });
 
-test("completed + collapsed: only the two-line summary header", () => {
-	const bash = register()["bash"];
-	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: false });
-	assert.equal(lines.length, 2);
-	assert.ok(lines[1].includes("✓"));
+test("partial bash: running leads line2, detail follows", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: false });
+	assert.deepEqual(lines, ["bash greet", "  running echo hi"]);
 });
 
-test("completed error: exit code shown in the summary", () => {
+test("partial + expanded bash: running header then streamed body", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: true });
+	assert.deepEqual(lines, ["bash greet", "  running echo hi", "  hello", "  world"]);
+});
+
+test("completed + expanded bash: status header then body", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: true });
+	assert.deepEqual(lines, ["bash greet", "  ✓ echo hi", "  hello", "  world"]);
+});
+
+test("completed read: size summary leads line2, path follows, no arrow", () => {
+	const result = { content: [{ type: "text", text: "x\n".repeat(24) }] };
+	const lines = render(register()["read"], { path: "docs/models.md", reasoning: "check models" }, result, { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["read check models", "  24 lines docs/models.md"]);
+});
+
+test("completed grep: match summary leads line2, pattern follows", () => {
+	const result = { content: [{ type: "text", text: "src/a.ts:3:foo\nsrc/b.ts:7:foo\nsrc/b.ts:9:foo" }] };
+	const lines = render(register()["grep"], { pattern: "foo", path: "src", reasoning: "find usage" }, result, { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["grep find usage", "  3 matches / 2 files foo in src"]);
+});
+
+test("narrow width: line2 truncation keeps the leading status", () => {
 	const bash = register()["bash"];
-	const lines = render(
-		bash,
-		bashArgs,
-		bashResult("boom\nCommand exited with code 2"),
-		{ isPartial: false, expanded: false, isError: true },
+	const block = bash.renderResult(
+		bashResult("hi"),
+		{ isPartial: false, expanded: false },
+		{},
+		{ args: { command: "echo hi --long-flag", reasoning: "greet" }, isPartial: false, expanded: false },
 	);
-	assert.equal(lines.length, 2);
-	assert.ok(lines[1].includes("exit 2"), `expected exit code, got: ${lines[1]}`);
+	const lines = block.render(12).map(stripAnsi);
+	assert.ok(
+		lines[1].trimStart().startsWith("✓"),
+		`expected leading ✓ preserved when truncated, got: ${lines[1]}`,
+	);
 });
