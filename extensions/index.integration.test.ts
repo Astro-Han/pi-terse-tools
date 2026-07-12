@@ -11,50 +11,59 @@ const register = (): Record<string, any> => {
 	return tools;
 };
 
-test("index: partial + expanded bash reveals streamed output", () => {
-	const bash = register()["bash"];
-	const block = bash.renderResult(
-		{ content: [{ type: "text", text: "hello\nworld" }] },
-		{ isPartial: true, expanded: true },
-		{},
-		{ args: { command: "echo hi", reasoning: "greet" }, isPartial: true, expanded: true },
-	);
-	assert.deepEqual(block.render(80), ["  hello", "  world"]);
-});
+// Pi renders a tool row by composing the call slot and the result slot. This
+// helper mirrors that composition so tests assert the real on-screen output.
+const render = (tool: any, args: any, result: any, opts: { isPartial: boolean; expanded: boolean; isError?: boolean }): string[] => {
+	const ctx = { args, isPartial: opts.isPartial, expanded: opts.expanded, isError: opts.isError ?? false };
+	const call = tool.renderCall(args, {}, ctx).render(80);
+	const body = tool.renderResult(result, opts, {}, ctx).render(80);
+	return [...call, ...body].map(stripAnsi);
+};
 
-test("index: partial + collapsed result slot renders nothing", () => {
-	const bash = register()["bash"];
-	const block = bash.renderResult(
-		{ content: [{ type: "text", text: "hello" }] },
-		{ isPartial: true, expanded: false },
-		{},
-		{ args: { command: "echo hi" }, isPartial: true, expanded: false },
-	);
-	assert.deepEqual(block.render(80), []);
-});
+const bashArgs = { command: "echo hi", reasoning: "greet" };
+const bashResult = (text: string) => ({ content: [{ type: "text", text }] });
 
-test("index: completed + expanded shows header then body", () => {
+test("partial + expanded: running header followed by streamed body", () => {
+	// Regression for the original bug: expanding while running showed nothing.
 	const bash = register()["bash"];
-	const block = bash.renderResult(
-		{ content: [{ type: "text", text: "hello\nworld" }] },
-		{ isPartial: false, expanded: true },
-		{},
-		{ args: { command: "echo hi", reasoning: "greet" }, isPartial: false, expanded: true },
-	);
-	const lines = block.render(80);
+	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: true });
 	assert.equal(lines.length, 4);
+	assert.equal(lines[0], "bash greet");
+	assert.ok(lines[1].includes("running"), `expected running summary, got: ${lines[1]}`);
 	assert.deepEqual(lines.slice(2), ["  hello", "  world"]);
 });
 
-test("index: call slot shows a two-line running header while partial", () => {
+test("partial + collapsed: only the running header", () => {
 	const bash = register()["bash"];
-	const block = bash.renderCall(
-		{ command: "echo hi", reasoning: "greet" },
-		{},
-		{ isPartial: true, expanded: true },
-	);
-	const lines = block.render(80).map(stripAnsi);
+	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: false });
 	assert.equal(lines.length, 2);
+	assert.ok(lines[1].includes("running"));
+});
+
+test("completed + expanded: summary header followed by body", () => {
+	const bash = register()["bash"];
+	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: true });
+	assert.equal(lines.length, 4);
 	assert.equal(lines[0], "bash greet");
-	assert.ok(lines[1].includes("running"), `expected running summary, got: ${lines[1]}`);
+	assert.ok(lines[1].includes("✓"), `expected checkmark summary, got: ${lines[1]}`);
+	assert.deepEqual(lines.slice(2), ["  hello", "  world"]);
+});
+
+test("completed + collapsed: only the two-line summary header", () => {
+	const bash = register()["bash"];
+	const lines = render(bash, bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: false });
+	assert.equal(lines.length, 2);
+	assert.ok(lines[1].includes("✓"));
+});
+
+test("completed error: exit code shown in the summary", () => {
+	const bash = register()["bash"];
+	const lines = render(
+		bash,
+		bashArgs,
+		bashResult("boom\nCommand exited with code 2"),
+		{ isPartial: false, expanded: false, isError: true },
+	);
+	assert.equal(lines.length, 2);
+	assert.ok(lines[1].includes("exit 2"), `expected exit code, got: ${lines[1]}`);
 });
