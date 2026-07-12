@@ -20,6 +20,9 @@
   "engines": {
     "node": ">=22.19.0"
   },
+  "scripts": {
+    "test": "node --test extensions/*.test.ts"
+  },
   "files": [
     "extensions/index.ts",
     "README.md",
