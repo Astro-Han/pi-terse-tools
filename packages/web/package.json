@@ -1,0 +1,28 @@
+{
+  "name": "pi-terse-web",
+  "version": "0.1.0",
+  "description": "Lean web fetch + web search for the Pi coding agent: URL to clean markdown, query to results. One fetch, one timeout, no SSRF DNS gymnastics.",
+  "license": "MIT",
+  "author": "astrohan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Astro-Han/pi-terse-tools.git",
+    "directory": "packages/web"
+  },
+  "homepage": "https://github.com/Astro-Han/pi-terse-tools#readme",
+  "bugs": { "url": "https://github.com/Astro-Han/pi-terse-tools/issues" },
+  "keywords": ["pi-package", "pi", "pi-coding-agent", "extension", "web", "fetch", "search"],
+  "type": "module",
+  "engines": { "node": ">=22.19.0" },
+  "scripts": { "test": "node --test test/*.test.ts" },
+  "files": ["src", "LICENSE"],
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "linkedom": "^0.16.0",
+    "turndown": "^7.2.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.80.0",
+    "typebox": "*"
+  }
+}
