@@ -129,6 +129,18 @@ test("returns a short note for binary content instead of decoded garbage", async
 	assert.match(r.content, /binary|not extracted/i);
 });
 
+test("returns the binary note without reading the body for declared non-text types", async () => {
+	const stalled = new ReadableStream({ start(c) { c.enqueue(new Uint8Array([0x25, 0x50, 0x44, 0x46])); /* never close */ } });
+	const t0 = Date.now();
+	const r = await fetchPage("https://example.com/a.pdf", {
+		fetchImpl: async () => new Response(stalled, { headers: { "content-type": "application/pdf" } }),
+		timeoutMs: 50,
+	});
+	assert.equal(r.error, null);
+	assert.match(r.content, /binary|not extracted/i);
+	assert.ok(Date.now() - t0 < 40, `should return immediately, not wait for the body (took ${Date.now() - t0}ms)`);
+});
+
 test("bounds the title too, not just the body", async () => {
 	const longTitle = "T".repeat(50000);
 	const html = `<html><head><title>${longTitle}</title></head><body><article><p>${"body ".repeat(200)}</p></article></body></html>`;

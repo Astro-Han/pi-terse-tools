@@ -119,6 +119,12 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 			return err(`HTTP ${response.status}`);
 		}
 		const contentType = response.headers.get("content-type") ?? "";
+		// Declared non-text: return a short note without reading the body, so a
+		// slow/binary stream can't burn the timeout or memory on content we discard.
+		if (contentType && !isHtml(contentType, "") && !isTextish(contentType)) {
+			await response.body?.cancel().catch(() => {});
+			return { url, title: "", contentType, content: `[binary content (${contentType}), not extracted]`, truncated: false, error: null };
+		}
 		const { text, truncated: byteTruncated } = await readCapped(response, maxBytes, parseCharset(contentType));
 
 		let title = "";
