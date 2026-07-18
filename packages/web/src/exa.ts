@@ -98,5 +98,9 @@ export async function searchExa(query: string, opts: SearchOptions): Promise<Sea
 		return { query, results: [], error: "Exa response missing a results array" };
 	}
 	const hits = normalizeExaResults(json);
+	const rawResults = (json as { results: unknown[] }).results;
+	if (rawResults.length > 0 && hits.length === 0) {
+		return { query, results: [], error: "Exa returned results but none had a usable url" };
+	}
 	return { query, results: hits, error: null };
 }

@@ -88,3 +88,10 @@ test("searchExa treats a valid empty results array as a real zero result", async
 	assert.equal(out.error, null);
 	assert.equal(out.results.length, 0);
 });
+
+test("searchExa treats a non-empty results array where every item lacks a url as an error", async () => {
+	const fetchImpl = async () => jsonResponse({ results: [{ title: "no url" }] });
+	const out = await searchExa("q", { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.ok(out.error, "expected an error when results is non-empty but all items are unusable");
+	assert.equal(out.results.length, 0);
+});
