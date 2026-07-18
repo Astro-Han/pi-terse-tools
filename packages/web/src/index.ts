@@ -6,7 +6,8 @@
 //
 // The chat model synthesizes from what these return; neither tool curates,
 // summarizes, or renders. No SSRF DNS pre-resolution, no fallback cascade,
-// no curator. Proxy support is free via Node 22+ env-proxy handling.
+// no curator. Proxy needs no code here: under TUN it's the network layer;
+// under HTTP_PROXY, Node 24+ with NODE_USE_ENV_PROXY=1.
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";

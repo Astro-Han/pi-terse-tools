@@ -11,7 +11,7 @@ The chat model synthesizes from what these return. Neither tool curates, summari
 
 `pi-web-access` is powerful but heavy: seven search providers, a headless curator, a YouTube/PDF/video/GitHub extractor chain, and a DNS-resolving SSRF guard that breaks under fake-IP proxies (Clash/Mihomo TUN). `pi-terse-web` is the lean opposite for people whose web access is mostly docs, articles, and search results:
 
-- **No SSRF DNS gymnastics.** `guardUrl` checks a literal-IP denylist (`localhost`, `127.0.0.0/8`, `::1`, `169.254.0.0/16`, `0.0.0.0`) and never resolves DNS, so the fake-IP-proxy class of failures can't happen by construction.
+- **No SSRF DNS gymnastics.** `guardUrl` only checks the URL scheme and validity — it does not resolve DNS and keeps no host/IP denylist, so the fake-IP-proxy class of failures can't happen by construction. This is deliberate for a local single-user agent: the process already owns the network, and an incomplete denylist is worse than none. Network-policy isolation is the sandbox/runtime's job, not this tool's.
 - **One fetch, one timeout.** No Jina → Parallel → Gemini cascade that takes 30s+ and bills multiple API calls.
 - **Proxy is free under TUN.** Clash/Mihomo TUN intercepts at the network layer, so no proxy configuration is needed — the fake-IP SSRF bug class can't happen because there's no DNS guard to begin with. For `HTTP_PROXY`/`HTTPS_PROXY` setups, run Node 24+ with `NODE_USE_ENV_PROXY=1` (Node's global `fetch` then follows the env vars). Either way, zero proxy code in the tool.
 - **Bounded output.** A byte-capped stream read prevents huge pages exhausting memory; output is char-capped with a truncation marker, so a fetch can't overflow the context window.
@@ -40,7 +40,7 @@ export EXA_API_KEY=...
 
 ## Coexisting with pi-web-access
 
-Both register web tools, so disable `pi-web-access`'s tools (or uninstall it) to avoid the model seeing duplicates. `pi-terse-web` uses distinct tool names (`webfetch`, `websearch`) vs `pi-web-access` (`fetch_content`, `web_search`).
+The two can coexist — `pi-terse-web` uses distinct tool names (`webfetch`, `websearch`) vs `pi-web-access` (`fetch_content`, `web_search`), so there is no registration conflict. But the model will see overlapping capabilities; if you want a single lean set, disable `pi-web-access`'s tools or uninstall it.
 
 ## License
 
