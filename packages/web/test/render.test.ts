@@ -67,6 +67,16 @@ test("webfetch error shows a red cross and the error", () => {
 	assert.equal(lines[1], `${INDENT}${RED}✗${RESET} HTTP 404`);
 });
 
+test("webfetch error derives the cross from content when details has no error (throw path)", () => {
+	const c = renderFetchResult(
+		{ content: [{ type: "text", text: "Error fetching https://x.com/y: HTTP 404" }], details: {} },
+		{ expanded: false, isPartial: false }, {},
+		{ args: { url: "https://x.com/y" }, isError: true },
+	);
+	const lines = render(c);
+	assert.equal(lines[1], `${INDENT}${RED}✗${RESET} Error fetching https://x.com/y: HTTP 404`);
+});
+
 test("webfetch expanded appends the indented markdown", () => {
 	const c = renderFetchResult(fetchResult({ title: "T", text: "# T\n\nbody" }), { expanded: true, isPartial: false }, {}, { args: { url: "https://x.com" }, isError: false });
 	const lines = render(c);

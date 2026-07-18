@@ -1,6 +1,6 @@
 {
   "name": "pi-terse-web",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Lean web fetch + web search for the Pi coding agent: URL to clean markdown, query to results. One fetch, one timeout, no SSRF DNS gymnastics.",
   "license": "MIT",
   "author": "astrohan",

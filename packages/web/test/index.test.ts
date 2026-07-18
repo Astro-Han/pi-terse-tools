@@ -59,11 +59,12 @@ test("websearch execute clamps numResults to 1..20", async () => {
 	assert.deepEqual(bodies, [1, 20, 3]);
 });
 
-test("websearch execute errors without EXA_API_KEY", async () => {
+test("websearch execute throws without EXA_API_KEY", async () => {
 	await withApiKey(undefined, async () => {
-		const out = await register().websearch.execute("c", { query: "q" }, undefined);
-		assert.match(out.content[0].text, /EXA_API_KEY/i);
-		assert.ok(out.details.error);
+		await assert.rejects(
+			register().websearch.execute("c", { query: "q" }, undefined),
+			/EXA_API_KEY is not set/,
+		);
 	});
 });
 
@@ -87,54 +88,30 @@ test("webfetch execute prefixes the title as a markdown heading", async () => {
 	});
 });
 
-test("webfetch execute flags isError on missing url", async () => {
-	const out = await register().webfetch.execute("c", { url: "" }, undefined);
-	assert.equal(out.isError, true);
+test("webfetch execute throws on missing url", async () => {
+	await assert.rejects(register().webfetch.execute("c", { url: "" }, undefined), /url is required/);
 });
 
-test("webfetch execute flags isError on fetch failure", async () => {
+test("webfetch execute throws on fetch failure", async () => {
 	const stub = (async () => new Response("nope", { status: 404 })) as unknown as typeof fetch;
 	await withFetchStub(stub, async () => {
-		const out = await register().webfetch.execute("c", { url: "https://example.com/x" }, undefined);
-		assert.equal(out.isError, true);
+		await assert.rejects(
+			register().webfetch.execute("c", { url: "https://example.com/x" }, undefined),
+			/HTTP 404/,
+		);
 	});
 });
 
-test("websearch execute flags isError on missing query", async () => {
-	const out = await register().websearch.execute("c", { query: "" }, undefined);
-	assert.equal(out.isError, true);
+test("websearch execute throws on missing query", async () => {
+	await assert.rejects(register().websearch.execute("c", { query: "" }, undefined), /query is required/);
 });
 
-test("websearch execute flags isError on missing EXA_API_KEY", async () => {
-	await withApiKey(undefined, async () => {
-		const out = await register().websearch.execute("c", { query: "q" }, undefined);
-		assert.equal(out.isError, true);
-	});
-});
-
-test("websearch execute flags isError on Exa failure", async () => {
+test("websearch execute throws on Exa failure", async () => {
 	const stub = (async () => new Response("oops", { status: 500 })) as unknown as typeof fetch;
 	await withApiKey("test", () => withFetchStub(stub, async () => {
-		const out = await register().websearch.execute("c", { query: "q" }, undefined);
-		assert.equal(out.isError, true);
-	}));
-});
-
-test("webfetch execute does not flag isError on success", async () => {
-	const stub = (async () => new Response(
-		"<html><head><title>Hi</title></head><body><article><p>body words here</p></article></body></html>",
-		{ headers: { "content-type": "text/html" } },
-	)) as unknown as typeof fetch;
-	await withFetchStub(stub, async () => {
-		const out = await register().webfetch.execute("c", { url: "https://example.com/x" }, undefined);
-		assert.notEqual(out.isError, true);
-	});
-});
-
-test("websearch execute does not flag isError on success", async () => {
-	const stub = (async () => jsonResponse({ results: [] })) as unknown as typeof fetch;
-	await withApiKey("test", () => withFetchStub(stub, async () => {
-		const out = await register().websearch.execute("c", { query: "nothing" }, undefined);
-		assert.notEqual(out.isError, true);
+		await assert.rejects(
+			register().websearch.execute("c", { query: "q" }, undefined),
+			/Exa API error 500/,
+		);
 	}));
 });

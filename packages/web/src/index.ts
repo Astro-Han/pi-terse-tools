@@ -49,18 +49,10 @@ export default function (pi: ExtensionAPI): void {
 		renderResult: renderFetchResult,
 		async execute(_callId, params, signal) {
 			const url = params?.url;
-			if (typeof url !== "string" || !url.trim()) {
-				return {
-					content: [{ type: "text", text: "Error: url is required" }],
-					details: { error: "url is required" },
-					isError: true,
-				};
-			}
+			if (typeof url !== "string" || !url.trim()) throw new Error("url is required");
 			const result = await fetchPage(url.trim(), { signal });
-			const text = result.error
-				? `Error fetching ${url}: ${result.error}`
-				: formatFetchOutput(result);
-			return { content: [{ type: "text", text }], details: { url: result.url, title: result.title, contentType: result.contentType, truncated: result.truncated, error: result.error }, isError: !!result.error };
+			if (result.error) throw new Error(`Error fetching ${url}: ${result.error}`);
+			return { content: [{ type: "text", text: formatFetchOutput(result) }], details: { url: result.url, title: result.title, contentType: result.contentType, truncated: result.truncated, error: null } };
 		},
 	});
 
@@ -78,33 +70,18 @@ export default function (pi: ExtensionAPI): void {
 		renderResult: renderSearchResult,
 		async execute(_callId, params, signal) {
 			const query = params?.query;
-			if (typeof query !== "string" || !query.trim()) {
-				return {
-					content: [{ type: "text", text: "Error: query is required" }],
-					details: { error: "query is required" },
-					isError: true,
-				};
-			}
+			if (typeof query !== "string" || !query.trim()) throw new Error("query is required");
 			const apiKey = getExaApiKey();
-			if (!apiKey) {
-				return {
-					content: [{ type: "text", text: "Error: EXA_API_KEY is not set. Export it to enable web search." }],
-					details: { error: "missing api key" },
-					isError: true,
-				};
-			}
+			if (!apiKey) throw new Error("EXA_API_KEY is not set. Export it to enable web search.");
 			let numResults = DEFAULT_NUM_RESULTS;
 			if (typeof params.numResults === "number" && Number.isFinite(params.numResults)) {
 				numResults = Math.min(20, Math.max(1, Math.floor(params.numResults)));
 			}
 			const result = await searchExa(query.trim(), { apiKey, signal, numResults });
-			const text = result.error
-				? `Error searching: ${result.error}`
-				: formatSearchOutput(result);
+			if (result.error) throw new Error(`Error searching: ${result.error}`);
 			return {
-				content: [{ type: "text", text }],
-				details: { query: result.query, resultCount: result.results.length, error: result.error },
-				isError: !!result.error,
+				content: [{ type: "text", text: formatSearchOutput(result) }],
+				details: { query: result.query, resultCount: result.results.length, error: null },
 			};
 		},
 	});
