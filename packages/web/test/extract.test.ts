@@ -48,3 +48,8 @@ test("absolutizes relative links against the base url", () => {
 	assert.match(markdown, /\]\(https:\/\/example\.com\/docs\/next\)/);
 	assert.match(markdown, /\]\(https:\/\/example\.com\/docs\/related\.html\)/);
 });
+
+test("returns text for tagless input served as html (no html structure)", () => {
+	const { markdown } = htmlToMarkdown("中文正文", "https://example.com/");
+	assert.match(markdown, /中文正文/);
+});

@@ -43,7 +43,11 @@ export function htmlToMarkdown(html: string, url: string): Extracted {
 	try {
 		title = document.title ?? "";
 		fallbackHtml = document.body?.innerHTML ?? "";
-	} catch {}
+	} catch {
+		// linkedom's document.body throws when the input has no <html> structure
+		// (tagless text served as text/html); fall back to the raw input below.
+	}
+	if (!fallbackHtml) fallbackHtml = html;
 
 	let contentHtml = "";
 	try {
