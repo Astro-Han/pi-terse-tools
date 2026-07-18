@@ -1,0 +1,65 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { normalizeExaResults, searchExa } from "../src/exa.ts";
+
+test("normalize maps results to title/url/snippet, joining highlights", () => {
+	const out = normalizeExaResults({
+		results: [
+			{ title: "A", url: "https://a.com", highlights: ["key point one", "key point two"], text: "long text..." },
+			{ title: "B", url: "https://b.com", highlights: [], text: "only text body" },
+			{ title: "C", url: "https://c.com" },
+		],
+	}, "query");
+	assert.equal(out.query, "query");
+	assert.deepEqual(out.results, [
+		{ title: "A", url: "https://a.com", snippet: "key point one key point two" },
+		{ title: "B", url: "https://b.com", snippet: "only text body" },
+		{ title: "C", url: "https://c.com", snippet: "" },
+	]);
+});
+
+test("normalize skips results without a url", () => {
+	const out = normalizeExaResults({ results: [{ title: "no url" }, { title: "ok", url: "https://ok.com" }] }, "q");
+	assert.equal(out.results.length, 1);
+	assert.equal(out.results[0].url, "https://ok.com");
+});
+
+test("normalize handles a missing results array", () => {
+	assert.deepEqual(normalizeExaResults({}, "q").results, []);
+	assert.deepEqual(normalizeExaResults(null, "q").results, []);
+});
+
+const jsonResponse = (obj: unknown) =>
+	new Response(JSON.stringify(obj), { headers: { "content-type": "application/json" } });
+
+test("searchExa posts to /search and returns normalized results", async () => {
+	const fetchImpl = async (url: string, init: RequestInit) => {
+		assert.equal(url, "https://api.exa.ai/search");
+		const body = JSON.parse(init.body as string);
+		assert.equal(body.query, "lean web fetch");
+		assert.equal(body.numResults, 5);
+		return jsonResponse({ results: [{ title: "T", url: "https://t.com", highlights: ["hi"] }] });
+	};
+	const out = await searchExa("lean web fetch", { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.equal(out.error, null);
+	assert.equal(out.results.length, 1);
+	assert.equal(out.results[0].snippet, "hi");
+});
+
+test("searchExa sends the api key header", async () => {
+	let seenKey = "";
+	const fetchImpl = async (_url: string, init: RequestInit) => {
+		seenKey = (init.headers as Record<string, string>)["x-api-key"];
+		return jsonResponse({ results: [] });
+	};
+	await searchExa("q", { apiKey: "secret", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.equal(seenKey, "secret");
+});
+
+test("searchExa reports a non-ok response as an error", async () => {
+	const fetchImpl = async () => new Response("bad", { status: 401 });
+	const out = await searchExa("q", { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.ok(out.error);
+	assert.match(out.error!, /401/);
+});
