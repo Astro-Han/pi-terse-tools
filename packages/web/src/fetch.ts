@@ -123,7 +123,7 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 		let title = "";
 		let content: string;
 		if (isHtml(contentType, text)) {
-			const extracted = htmlToMarkdown(text, url);
+			const extracted = htmlToMarkdown(text, response.url || url);
 			title = extracted.title;
 			content = extracted.markdown;
 		} else if (contentType === "" || isTextish(contentType)) {

@@ -36,3 +36,15 @@ test("never throws on broken html, returns whatever it can", () => {
 	const { markdown } = htmlToMarkdown("<<<not html at all", "https://example.com/");
 	assert.equal(typeof markdown, "string");
 });
+
+test("absolutizes relative links against the base url", () => {
+	const body = "Read the next section carefully. ".repeat(40);
+	const html = `<html><head><title>Docs</title></head><body><article>
+	<h1>Docs</h1>
+	<p>${body}</p>
+	<p>See <a href="/docs/next">next</a> and <a href="related.html">related</a>.</p>
+	</article></body></html>`;
+	const { markdown } = htmlToMarkdown(html, "https://example.com/docs/start");
+	assert.match(markdown, /\]\(https:\/\/example\.com\/docs\/next\)/);
+	assert.match(markdown, /\]\(https:\/\/example\.com\/docs\/related\.html\)/);
+});
