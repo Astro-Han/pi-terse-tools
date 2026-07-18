@@ -107,3 +107,13 @@ test("times out when the body stream stalls after headers", async () => {
 	assert.ok(r.error);
 	assert.match(r.error!, /timed out|abort/i);
 });
+
+test("decodes by the declared charset instead of hardcoded utf-8", async () => {
+	// "中文" encoded as GBK bytes; served as text/plain so the raw decode path is tested.
+	const gbkBytes = new Uint8Array([0xd6, 0xd0, 0xce, 0xc4]);
+	const r = await fetchPage("https://example.com/cn", {
+		fetchImpl: async () => new Response(gbkBytes, { headers: { "content-type": "text/plain; charset=gbk" } }),
+	});
+	assert.equal(r.error, null);
+	assert.match(r.content, /中文/);
+});

@@ -34,13 +34,13 @@ const TRUNCATION_MARKER = "\n\n[content truncated]";
 
 /** Read at most maxBytes from the stream, so a huge page can't exhaust memory.
  *  Releases the socket when the cap is hit. */
-async function readCapped(response: Response, maxBytes: number): Promise<{ text: string; truncated: boolean }> {
+async function readCapped(response: Response, maxBytes: number, charset?: string): Promise<{ text: string; truncated: boolean }> {
 	const reader = response.body?.getReader();
 	if (!reader) {
 		const text = await response.text();
 		return { text, truncated: false };
 	}
-	const decoder = new TextDecoder("utf-8");
+	const decoder = safeDecoder(charset);
 	let text = "";
 	let bytes = 0;
 	let truncated = false;
@@ -59,6 +59,18 @@ async function readCapped(response: Response, maxBytes: number): Promise<{ text:
 	text += decoder.decode();
 	if (truncated) await reader.cancel().catch(() => {});
 	return { text, truncated };
+}
+
+function parseCharset(contentType: string): string | undefined {
+	const m = /charset=([^;]+)/i.exec(contentType);
+	return m?.[1]?.trim() || undefined;
+}
+
+function safeDecoder(charset?: string): TextDecoder {
+	if (charset) {
+		try { return new TextDecoder(charset); } catch { /* unsupported label, fall back */ }
+	}
+	return new TextDecoder("utf-8");
 }
 
 function isHtml(contentType: string, text: string): boolean {
@@ -98,7 +110,7 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 			return err(`HTTP ${response.status}`);
 		}
 		const contentType = response.headers.get("content-type") ?? "";
-		const { text, truncated: byteTruncated } = await readCapped(response, maxBytes);
+		const { text, truncated: byteTruncated } = await readCapped(response, maxBytes, parseCharset(contentType));
 
 		let title = "";
 		let content: string;
