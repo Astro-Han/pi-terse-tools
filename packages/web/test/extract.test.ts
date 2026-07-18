@@ -49,6 +49,13 @@ test("absolutizes relative links against the base url", () => {
 	assert.match(markdown, /\]\(https:\/\/example\.com\/docs\/related\.html\)/);
 });
 
+test("honors <base href> when absolutizing links", () => {
+	const body = "Read the next section carefully. ".repeat(40);
+	const html = `<html><head><base href="/docs/"><title>T</title></head><body><article><h1>T</h1><p>${body}</p><p>See <a href="next">next</a>.</p></article></body></html>`;
+	const { markdown } = htmlToMarkdown(html, "https://example.com/app/index");
+	assert.match(markdown, /\]\(https:\/\/example\.com\/docs\/next\)/);
+});
+
 test("returns text for tagless input served as html (no html structure)", () => {
 	const { markdown } = htmlToMarkdown("中文正文", "https://example.com/");
 	assert.match(markdown, /中文正文/);

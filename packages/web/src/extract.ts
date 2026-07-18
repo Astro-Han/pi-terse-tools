@@ -49,6 +49,12 @@ export function htmlToMarkdown(html: string, url: string): Extracted {
 	}
 	if (!fallbackHtml) fallbackHtml = html;
 
+	let baseHref: string | null = null;
+	try {
+		const baseEl = document.querySelector("base[href]");
+		baseHref = (baseEl as AttrNode | null)?.getAttribute("href") ?? null;
+	} catch {}
+
 	let contentHtml = "";
 	try {
 		const article = new Readability(document as unknown as Document).parse();
@@ -64,7 +70,7 @@ export function htmlToMarkdown(html: string, url: string): Extracted {
 
 	let base: URL | null = null;
 	try {
-		base = url ? new URL(url) : null;
+		base = baseHref ? new URL(baseHref, url) : (url ? new URL(url) : null);
 	} catch {}
 
 	const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
