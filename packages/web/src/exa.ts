@@ -59,6 +59,7 @@ export async function searchExa(query: string, opts: SearchOptions): Promise<Sea
 		numResults = DEFAULT_NUM_RESULTS,
 		timeoutMs = DEFAULT_TIMEOUT_MS,
 	} = opts;
+	const callerSignal = opts.signal;
 	const signal = opts.signal
 		? AbortSignal.any([opts.signal, AbortSignal.timeout(timeoutMs)])
 		: AbortSignal.timeout(timeoutMs);
@@ -78,6 +79,7 @@ export async function searchExa(query: string, opts: SearchOptions): Promise<Sea
 		});
 	} catch (e) {
 		const msg = e instanceof Error ? e.message : String(e);
+		if (callerSignal?.aborted) return { query, results: [], error: "aborted" };
 		if (/timeout|abort/i.test(msg)) {
 			return { query, results: [], error: `search timed out after ${timeoutMs}ms` };
 		}
@@ -92,6 +94,8 @@ export async function searchExa(query: string, opts: SearchOptions): Promise<Sea
 
 	const json = await response.json().catch(() => null);
 	if (json === null || typeof json !== "object") {
+		if (callerSignal?.aborted) return { query, results: [], error: "aborted" };
+		if (signal.aborted) return { query, results: [], error: `search timed out after ${timeoutMs}ms` };
 		return { query, results: [], error: "Exa returned a non-JSON or invalid response" };
 	}
 	if (!Array.isArray((json as { results?: unknown }).results)) {

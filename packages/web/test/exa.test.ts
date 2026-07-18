@@ -95,3 +95,25 @@ test("searchExa treats a non-empty results array where every item lacks a url as
 	assert.ok(out.error, "expected an error when results is non-empty but all items are unusable");
 	assert.equal(out.results.length, 0);
 });
+
+test("searchExa reports a caller abort as 'aborted', not a timeout", async () => {
+	const ac = new AbortController();
+	ac.abort();
+	const fetchImpl = async (_u: string, init: RequestInit) => {
+		if (init.signal?.aborted) throw new DOMException("aborted", "AbortError");
+		return new Response();
+	};
+	const out = await searchExa("q", { apiKey: "k", signal: ac.signal, fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.equal(out.error, "aborted");
+});
+
+test("searchExa reports a body-read timeout as a timeout, not a non-JSON error", async () => {
+	const keep = setTimeout(() => {}, 1000);
+	const fetchImpl = async (_u: string, init: RequestInit) => new Response(new ReadableStream({
+		start(c) { init.signal?.addEventListener("abort", () => c.error(new DOMException("aborted", "AbortError")), { once: true }); },
+	}), { headers: { "content-type": "application/json" } });
+	const out = await searchExa("q", { apiKey: "k", timeoutMs: 30, fetchImpl: fetchImpl as unknown as typeof fetch });
+	clearTimeout(keep);
+	assert.match(out.error!, /timed out/i);
+	assert.doesNotMatch(out.error!, /non-JSON/i);
+});
