@@ -15,7 +15,10 @@
   "type": "module",
   "engines": { "node": ">=22.19.0" },
   "scripts": { "test": "node --test test/*.test.ts" },
-  "files": ["src", "LICENSE"],
+  "files": ["src", "README.md", "LICENSE"],
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "linkedom": "^0.16.0",
