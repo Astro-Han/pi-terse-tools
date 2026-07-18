@@ -17,11 +17,6 @@ export interface SearchHit {
 	snippet: string;
 }
 
-export interface NormalizedSearch {
-	query: string;
-	results: SearchHit[];
-}
-
 export interface SearchOptions {
 	apiKey: string;
 	fetchImpl?: typeof fetch;
@@ -36,7 +31,7 @@ export interface SearchResult {
 	error: string | null;
 }
 
-export function normalizeExaResults(json: unknown, query: string): NormalizedSearch {
+export function normalizeExaResults(json: unknown): SearchHit[] {
 	const raw = (json as { results?: unknown[] } | null)?.results;
 	const hits: SearchHit[] = [];
 	if (Array.isArray(raw)) {
@@ -53,7 +48,7 @@ export function normalizeExaResults(json: unknown, query: string): NormalizedSea
 			hits.push({ title, url: r.url, snippet });
 		}
 	}
-	return { query, results: hits };
+	return hits;
 }
 
 export async function searchExa(query: string, opts: SearchOptions): Promise<SearchResult> {
@@ -101,6 +96,6 @@ export async function searchExa(query: string, opts: SearchOptions): Promise<Sea
 	if (!Array.isArray((json as { results?: unknown }).results)) {
 		return { query, results: [], error: "Exa response missing a results array" };
 	}
-	const normalized = normalizeExaResults(json, query);
-	return { query, results: normalized.results, error: null };
+	const hits = normalizeExaResults(json);
+	return { query, results: hits, error: null };
 }

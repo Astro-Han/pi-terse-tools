@@ -10,9 +10,8 @@ test("normalize maps results to title/url/snippet, joining highlights", () => {
 			{ title: "B", url: "https://b.com", highlights: [], text: "only text body" },
 			{ title: "C", url: "https://c.com" },
 		],
-	}, "query");
-	assert.equal(out.query, "query");
-	assert.deepEqual(out.results, [
+	});
+	assert.deepEqual(out, [
 		{ title: "A", url: "https://a.com", snippet: "key point one key point two" },
 		{ title: "B", url: "https://b.com", snippet: "only text body" },
 		{ title: "C", url: "https://c.com", snippet: "" },
@@ -20,14 +19,14 @@ test("normalize maps results to title/url/snippet, joining highlights", () => {
 });
 
 test("normalize skips results without a url", () => {
-	const out = normalizeExaResults({ results: [{ title: "no url" }, { title: "ok", url: "https://ok.com" }] }, "q");
-	assert.equal(out.results.length, 1);
-	assert.equal(out.results[0].url, "https://ok.com");
+	const out = normalizeExaResults({ results: [{ title: "no url" }, { title: "ok", url: "https://ok.com" }] });
+	assert.equal(out.length, 1);
+	assert.equal(out[0].url, "https://ok.com");
 });
 
 test("normalize handles a missing results array", () => {
-	assert.deepEqual(normalizeExaResults({}, "q").results, []);
-	assert.deepEqual(normalizeExaResults(null, "q").results, []);
+	assert.deepEqual(normalizeExaResults({}), []);
+	assert.deepEqual(normalizeExaResults(null), []);
 });
 
 const jsonResponse = (obj: unknown) =>
