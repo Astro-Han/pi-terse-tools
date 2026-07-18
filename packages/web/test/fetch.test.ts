@@ -14,13 +14,13 @@ const respond = (
 	(_url: string, _init?: unknown) =>
 		Promise.resolve(new Response(body, { status, headers: { "content-type": type } }));
 
-test("blocks local urls without calling fetch", async () => {
+test("blocks non-http schemes without calling fetch", async () => {
 	let called = false;
-	const r = await fetchPage("http://127.0.0.1/", {
+	const r = await fetchPage("file:///etc/passwd", {
 		fetchImpl: () => { called = true; return Promise.resolve(new Response()); },
 	});
 	assert.equal(called, false);
-	assert.equal(r.error, "host is blocked");
+	assert.equal(r.error, "only http and https URLs are allowed");
 });
 
 test("converts an html page to markdown with title", async () => {
