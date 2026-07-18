@@ -12,7 +12,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import { fetchPage, type FetchResult } from "./fetch.ts";
-import { searchExa, type SearchResult } from "./exa.ts";
+import { searchExa, DEFAULT_NUM_RESULTS, type SearchResult } from "./exa.ts";
 
 function getExaApiKey(): string | null {
 	const v = process.env.EXA_API_KEY;
@@ -55,7 +55,7 @@ export default function (pi: ExtensionAPI): void {
 			const text = result.error
 				? `Error fetching ${url}: ${result.error}`
 				: formatFetchOutput(result);
-			return { content: [{ type: "text", text }], details: { ...result } };
+			return { content: [{ type: "text", text }], details: { url: result.url, title: result.title, contentType: result.contentType, truncated: result.truncated, error: result.error } };
 		},
 	});
 
@@ -84,7 +84,7 @@ export default function (pi: ExtensionAPI): void {
 					details: { error: "missing api key" },
 				};
 			}
-			let numResults = 5;
+			let numResults = DEFAULT_NUM_RESULTS;
 			if (typeof params.numResults === "number" && Number.isFinite(params.numResults)) {
 				numResults = Math.min(20, Math.max(1, Math.floor(params.numResults)));
 			}

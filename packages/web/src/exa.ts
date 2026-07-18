@@ -8,7 +8,7 @@
 
 const EXA_SEARCH_URL = "https://api.exa.ai/search";
 const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_NUM_RESULTS = 5;
+export const DEFAULT_NUM_RESULTS = 5;
 const SNIPPET_MAX = 500;
 
 export interface SearchHit {
