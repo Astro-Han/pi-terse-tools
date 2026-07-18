@@ -118,19 +118,20 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 			await response.body?.cancel().catch(() => {});
 			return err(`HTTP ${response.status}`);
 		}
+		const finalUrl = response.url || url;
 		const contentType = response.headers.get("content-type") ?? "";
 		// Declared non-text: return a short note without reading the body, so a
 		// slow/binary stream can't burn the timeout or memory on content we discard.
 		if (contentType && !isHtml(contentType, "") && !isTextish(contentType)) {
 			await response.body?.cancel().catch(() => {});
-			return { url, title: "", contentType, content: `[binary content (${contentType}), not extracted]`, truncated: false, error: null };
+			return { url: finalUrl, title: "", contentType, content: `[binary content (${contentType}), not extracted]`, truncated: false, error: null };
 		}
 		const { text, truncated: byteTruncated } = await readCapped(response, maxBytes, parseCharset(contentType));
 
 		let title = "";
 		let content: string;
 		if (isHtml(contentType, text)) {
-			const extracted = htmlToMarkdown(text, response.url || url);
+			const extracted = htmlToMarkdown(text, finalUrl);
 			title = extracted.title;
 			content = extracted.markdown;
 		} else if (contentType === "" || isTextish(contentType)) {
@@ -155,7 +156,7 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 			content = content.slice(0, maxChars) + TRUNCATION_MARKER;
 			truncated = true;
 		}
-		return { url, title, contentType, content, truncated, error: null };
+		return { url: finalUrl, title, contentType, content, truncated, error: null };
 	}
 
 	const workPromise = work();

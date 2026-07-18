@@ -150,3 +150,12 @@ test("bounds the title too, not just the body", async () => {
 	assert.ok(r.title.length <= 200, `title not bounded: ${r.title.length}`);
 	assert.equal(r.truncated, true);
 });
+
+test("reports the final url after a redirect, not the requested url", async () => {
+	const r = new Response(article("Final", "body text here "), { headers: { "content-type": "text/html" } });
+	Object.defineProperty(r, "url", { value: "https://example.com/final" });
+	const out = await fetchPage("https://example.com/orig", {
+		fetchImpl: async () => r,
+	});
+	assert.equal(out.url, "https://example.com/final");
+});
