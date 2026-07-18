@@ -14,6 +14,7 @@ import { Type } from "typebox";
 
 import { fetchPage, type FetchResult } from "./fetch.ts";
 import { searchExa, DEFAULT_NUM_RESULTS, type SearchResult } from "./exa.ts";
+import { renderFetchCall, renderFetchResult, renderSearchCall, renderSearchResult } from "./render.ts";
 
 function getExaApiKey(): string | null {
 	const v = process.env.EXA_API_KEY;
@@ -44,6 +45,8 @@ export default function (pi: ExtensionAPI): void {
 		parameters: Type.Object({
 			url: Type.String({ description: "The URL to fetch (http or https)" }),
 		}),
+		renderCall: renderFetchCall,
+		renderResult: renderFetchResult,
 		async execute(_callId, params, signal) {
 			const url = params?.url;
 			if (typeof url !== "string" || !url.trim()) {
@@ -70,6 +73,8 @@ export default function (pi: ExtensionAPI): void {
 			query: Type.String({ description: "The search query" }),
 			numResults: Type.Optional(Type.Number({ description: "Number of results (default 5, max 20)" })),
 		}),
+		renderCall: renderSearchCall,
+		renderResult: renderSearchResult,
 		async execute(_callId, params, signal) {
 			const query = params?.query;
 			if (typeof query !== "string" || !query.trim()) {
