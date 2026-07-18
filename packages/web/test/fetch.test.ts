@@ -128,3 +128,13 @@ test("returns a short note for binary content instead of decoded garbage", async
 	assert.ok(r.content.length < 200, `expected a short note, got ${r.content.length} chars`);
 	assert.match(r.content, /binary|not extracted/i);
 });
+
+test("bounds the title too, not just the body", async () => {
+	const longTitle = "T".repeat(50000);
+	const html = `<html><head><title>${longTitle}</title></head><body><article><p>${"body ".repeat(200)}</p></article></body></html>`;
+	const r = await fetchPage("https://example.com/bigtitle", {
+		fetchImpl: async () => new Response(html, { headers: { "content-type": "text/html" } }),
+	});
+	assert.ok(r.title.length <= 200, `title not bounded: ${r.title.length}`);
+	assert.equal(r.truncated, true);
+});

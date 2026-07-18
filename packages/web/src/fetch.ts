@@ -30,6 +30,7 @@ export interface FetchOptions {
 const DEFAULT_MAX_BYTES = 5_000_000;
 const DEFAULT_MAX_CHARS = 20_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
+const MAX_TITLE = 200;
 const TRUNCATION_MARKER = "\n\n[content truncated]";
 
 /** Read at most maxBytes from the stream, so a huge page can't exhaust memory.
@@ -139,6 +140,10 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 		}
 
 		let truncated = byteTruncated;
+		if (title.length > MAX_TITLE) {
+			title = title.slice(0, MAX_TITLE);
+			truncated = true;
+		}
 		if (content.length > maxChars) {
 			content = content.slice(0, maxChars) + TRUNCATION_MARKER;
 			truncated = true;
