@@ -3,9 +3,10 @@
 // One fetch, one timeout, one result, and the timeout covers the WHOLE
 // lifecycle (headers + body), not just the headers. No SSRF DNS pre-resolution
 // (guardUrl only checks scheme), no fallback cascade, no headless browser. The
-// HTTP client is injected so the pipeline is deterministic under test, and Node
-// 22+ follows http(s)_proxy env vars when NODE_USE_ENV_PROXY is set, so proxy
-// support is free.
+// HTTP client is injected so the pipeline is deterministic under test. Proxy
+// needs no code here: under TUN/fake-IP proxies interception is at the network
+// layer, and under HTTP_PROXY setups Node 24+ follows the env vars when
+// NODE_USE_ENV_PROXY is set.
 
 import { guardUrl } from "./guard.ts";
 import { htmlToMarkdown } from "./extract.ts";

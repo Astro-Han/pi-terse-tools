@@ -13,7 +13,7 @@ The chat model synthesizes from what these return. Neither tool curates, summari
 
 - **No SSRF DNS gymnastics.** `guardUrl` checks a literal-IP denylist (`localhost`, `127.0.0.0/8`, `::1`, `169.254.0.0/16`, `0.0.0.0`) and never resolves DNS, so the fake-IP-proxy class of failures can't happen by construction.
 - **One fetch, one timeout.** No Jina → Parallel → Gemini cascade that takes 30s+ and bills multiple API calls.
-- **Proxy is free.** Node 22+ follows `http(s)_proxy` / `NODE_USE_ENV_PROXY` automatically — zero proxy code.
+- **Proxy is free under TUN.** Clash/Mihomo TUN intercepts at the network layer, so no proxy configuration is needed — the fake-IP SSRF bug class can't happen because there's no DNS guard to begin with. For `HTTP_PROXY`/`HTTPS_PROXY` setups, run Node 24+ with `NODE_USE_ENV_PROXY=1` (Node's global `fetch` then follows the env vars). Either way, zero proxy code in the tool.
 - **Bounded output.** A byte-capped stream read prevents huge pages exhausting memory; output is char-capped with a truncation marker, so a fetch can't overflow the context window.
 
 ## Install
