@@ -160,7 +160,6 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 	}
 
 	const workPromise = work();
-	workPromise.catch(() => {}); // if the timeout wins the race, swallow work's late rejection
 	try {
 		return await Promise.race([workPromise, timeoutPromise]);
 	} catch (e) {
