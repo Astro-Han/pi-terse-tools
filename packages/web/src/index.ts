@@ -53,13 +53,14 @@ export default function (pi: ExtensionAPI): void {
 				return {
 					content: [{ type: "text", text: "Error: url is required" }],
 					details: { error: "url is required" },
+					isError: true,
 				};
 			}
 			const result = await fetchPage(url.trim(), { signal });
 			const text = result.error
 				? `Error fetching ${url}: ${result.error}`
 				: formatFetchOutput(result);
-			return { content: [{ type: "text", text }], details: { url: result.url, title: result.title, contentType: result.contentType, truncated: result.truncated, error: result.error } };
+			return { content: [{ type: "text", text }], details: { url: result.url, title: result.title, contentType: result.contentType, truncated: result.truncated, error: result.error }, isError: !!result.error };
 		},
 	});
 
@@ -81,6 +82,7 @@ export default function (pi: ExtensionAPI): void {
 				return {
 					content: [{ type: "text", text: "Error: query is required" }],
 					details: { error: "query is required" },
+					isError: true,
 				};
 			}
 			const apiKey = getExaApiKey();
@@ -88,6 +90,7 @@ export default function (pi: ExtensionAPI): void {
 				return {
 					content: [{ type: "text", text: "Error: EXA_API_KEY is not set. Export it to enable web search." }],
 					details: { error: "missing api key" },
+					isError: true,
 				};
 			}
 			let numResults = DEFAULT_NUM_RESULTS;
@@ -101,6 +104,7 @@ export default function (pi: ExtensionAPI): void {
 			return {
 				content: [{ type: "text", text }],
 				details: { query: result.query, resultCount: result.results.length, error: result.error },
+				isError: !!result.error,
 			};
 		},
 	});

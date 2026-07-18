@@ -86,3 +86,55 @@ test("webfetch execute prefixes the title as a markdown heading", async () => {
 		assert.equal(out.details.error, null);
 	});
 });
+
+test("webfetch execute flags isError on missing url", async () => {
+	const out = await register().webfetch.execute("c", { url: "" }, undefined);
+	assert.equal(out.isError, true);
+});
+
+test("webfetch execute flags isError on fetch failure", async () => {
+	const stub = (async () => new Response("nope", { status: 404 })) as unknown as typeof fetch;
+	await withFetchStub(stub, async () => {
+		const out = await register().webfetch.execute("c", { url: "https://example.com/x" }, undefined);
+		assert.equal(out.isError, true);
+	});
+});
+
+test("websearch execute flags isError on missing query", async () => {
+	const out = await register().websearch.execute("c", { query: "" }, undefined);
+	assert.equal(out.isError, true);
+});
+
+test("websearch execute flags isError on missing EXA_API_KEY", async () => {
+	await withApiKey(undefined, async () => {
+		const out = await register().websearch.execute("c", { query: "q" }, undefined);
+		assert.equal(out.isError, true);
+	});
+});
+
+test("websearch execute flags isError on Exa failure", async () => {
+	const stub = (async () => new Response("oops", { status: 500 })) as unknown as typeof fetch;
+	await withApiKey("test", () => withFetchStub(stub, async () => {
+		const out = await register().websearch.execute("c", { query: "q" }, undefined);
+		assert.equal(out.isError, true);
+	}));
+});
+
+test("webfetch execute does not flag isError on success", async () => {
+	const stub = (async () => new Response(
+		"<html><head><title>Hi</title></head><body><article><p>body words here</p></article></body></html>",
+		{ headers: { "content-type": "text/html" } },
+	)) as unknown as typeof fetch;
+	await withFetchStub(stub, async () => {
+		const out = await register().webfetch.execute("c", { url: "https://example.com/x" }, undefined);
+		assert.notEqual(out.isError, true);
+	});
+});
+
+test("websearch execute does not flag isError on success", async () => {
+	const stub = (async () => jsonResponse({ results: [] })) as unknown as typeof fetch;
+	await withApiKey("test", () => withFetchStub(stub, async () => {
+		const out = await register().websearch.execute("c", { query: "nothing" }, undefined);
+		assert.notEqual(out.isError, true);
+	}));
+});
