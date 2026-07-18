@@ -63,3 +63,23 @@ test("searchExa reports a non-ok response as an error", async () => {
 	assert.ok(out.error);
 	assert.match(out.error!, /401/);
 });
+
+test("searchExa treats a broken 200 as an upstream error, not empty results", async () => {
+	const fetchImpl = async () => new Response("not json", { status: 200, headers: { "content-type": "application/json" } });
+	const out = await searchExa("q", { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.ok(out.error, "expected an error for a broken 200");
+	assert.equal(out.results.length, 0);
+});
+
+test("searchExa treats a 200 without a results array as an error", async () => {
+	const fetchImpl = async () => jsonResponse({});
+	const out = await searchExa("q", { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.ok(out.error, "expected an error when results is missing");
+});
+
+test("searchExa treats a valid empty results array as a real zero result", async () => {
+	const fetchImpl = async () => jsonResponse({ results: [] });
+	const out = await searchExa("q", { apiKey: "k", fetchImpl: fetchImpl as unknown as typeof fetch });
+	assert.equal(out.error, null);
+	assert.equal(out.results.length, 0);
+});

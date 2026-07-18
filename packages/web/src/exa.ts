@@ -95,6 +95,12 @@ export async function searchExa(query: string, opts: SearchOptions): Promise<Sea
 	}
 
 	const json = await response.json().catch(() => null);
+	if (json === null || typeof json !== "object") {
+		return { query, results: [], error: "Exa returned a non-JSON or invalid response" };
+	}
+	if (!Array.isArray((json as { results?: unknown }).results)) {
+		return { query, results: [], error: "Exa response missing a results array" };
+	}
 	const normalized = normalizeExaResults(json, query);
 	return { query, results: normalized.results, error: null };
 }
