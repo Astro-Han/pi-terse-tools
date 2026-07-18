@@ -10,6 +10,7 @@ const EXA_SEARCH_URL = "https://api.exa.ai/search";
 const DEFAULT_TIMEOUT_MS = 30_000;
 export const DEFAULT_NUM_RESULTS = 5;
 const SNIPPET_MAX = 500;
+const MAX_TITLE = 200;
 
 export interface SearchHit {
 	title: string;
@@ -44,7 +45,7 @@ export function normalizeExaResults(json: unknown): SearchHit[] {
 			let snippet = highlights.join(" ");
 			if (!snippet && typeof r.text === "string") snippet = r.text.trim();
 			snippet = snippet.replace(/\s+/g, " ").trim().slice(0, SNIPPET_MAX);
-			const title = typeof r.title === "string" && r.title ? r.title : `Source ${i + 1}`;
+			const title = (typeof r.title === "string" && r.title ? r.title : `Source ${i + 1}`).slice(0, MAX_TITLE);
 			hits.push({ title, url: r.url, snippet });
 		}
 	}

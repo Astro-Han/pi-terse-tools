@@ -29,6 +29,12 @@ test("normalize handles a missing results array", () => {
 	assert.deepEqual(normalizeExaResults(null), []);
 });
 
+test("normalize caps an overly long title to 200 chars", () => {
+	const out = normalizeExaResults({ results: [{ title: "T".repeat(1000), url: "https://x.com" }] });
+	assert.equal(out[0].title.length, 200);
+	assert.equal(out[0].title, "T".repeat(200));
+});
+
 const jsonResponse = (obj: unknown) =>
 	new Response(JSON.stringify(obj), { headers: { "content-type": "application/json" } });
 
