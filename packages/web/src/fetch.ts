@@ -73,6 +73,13 @@ function safeDecoder(charset?: string): TextDecoder {
 	return new TextDecoder("utf-8");
 }
 
+function isTextish(contentType: string): boolean {
+	if (/^text\//i.test(contentType)) return true;
+	if (/application\/(json|xml|javascript)/i.test(contentType)) return true;
+	if (/\+(json|xml)\b/i.test(contentType)) return true;
+	return false;
+}
+
 function isHtml(contentType: string, text: string): boolean {
 	if (/html/i.test(contentType)) return true;
 	if (contentType === "" || /text\/plain/i.test(contentType)) {
@@ -118,8 +125,17 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<F
 			const extracted = htmlToMarkdown(text, url);
 			title = extracted.title;
 			content = extracted.markdown;
-		} else {
+		} else if (contentType === "" || isTextish(contentType)) {
 			content = text;
+		} else {
+			return {
+				url,
+				title: "",
+				contentType,
+				content: `[binary content (${contentType || "unknown type"}), not extracted]`,
+				truncated: byteTruncated,
+				error: null,
+			};
 		}
 
 		let truncated = byteTruncated;

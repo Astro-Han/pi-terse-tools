@@ -117,3 +117,14 @@ test("decodes by the declared charset instead of hardcoded utf-8", async () => {
 	assert.equal(r.error, null);
 	assert.match(r.content, /中文/);
 });
+
+test("returns a short note for binary content instead of decoded garbage", async () => {
+	const pdfBytes = new Uint8Array(5000);
+	pdfBytes.set([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34], 0); // "%PDF-1.4"
+	const r = await fetchPage("https://example.com/paper.pdf", {
+		fetchImpl: async () => new Response(pdfBytes, { headers: { "content-type": "application/pdf" } }),
+	});
+	assert.equal(r.error, null);
+	assert.ok(r.content.length < 200, `expected a short note, got ${r.content.length} chars`);
+	assert.match(r.content, /binary|not extracted/i);
+});
