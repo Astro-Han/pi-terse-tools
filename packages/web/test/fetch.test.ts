@@ -70,3 +70,40 @@ test("aborts with a timeout error when the fetch hangs", async () => {
 	assert.ok(r.error);
 	assert.match(r.error!, /timed out|abort/i);
 });
+
+test("returns FetchResult.error (not a throw) when the body stream errors mid-read", async () => {
+	const stream = new ReadableStream<Uint8Array>({
+		start(c) { c.enqueue(new TextEncoder().encode("part one ")); },
+		pull(c) { c.error(new Error("socket reset")); },
+	});
+	const r = await fetchPage("https://example.com/broken", {
+		fetchImpl: async () => new Response(stream, { headers: { "content-type": "text/plain" } }),
+	});
+	assert.ok(r.error);
+	assert.match(r.error!, /socket reset|abort|timed out/i);
+});
+
+test("cancels the reader when the byte cap is hit", async () => {
+	let cancelled = false;
+	const stream = new ReadableStream<Uint8Array>({
+		start(c) { c.enqueue(new TextEncoder().encode("x".repeat(10000))); },
+		cancel() { cancelled = true; },
+	});
+	await fetchPage("https://example.com/big", {
+		fetchImpl: async () => new Response(stream, { headers: { "content-type": "text/plain" } }),
+		maxBytes: 100,
+	});
+	assert.equal(cancelled, true);
+});
+
+test("times out when the body stream stalls after headers", async () => {
+	const stream = new ReadableStream<Uint8Array>({
+		start(c) { c.enqueue(new TextEncoder().encode("partial")); },
+	});
+	const r = await fetchPage("https://example.com/stall", {
+		fetchImpl: async () => new Response(stream, { headers: { "content-type": "text/plain" } }),
+		timeoutMs: 30,
+	});
+	assert.ok(r.error);
+	assert.match(r.error!, /timed out|abort/i);
+});
