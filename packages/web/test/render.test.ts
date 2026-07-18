@@ -6,6 +6,7 @@ import {
 	renderSearchCall, renderSearchResult,
 	DIM, BOLD, GREEN, RED, RESET, INDENT,
 } from "../src/render.ts";
+import { visibleWidth } from "@earendil-works/pi-tui";
 
 const render = (comp: unknown, width = 80): string[] =>
 	comp && typeof (comp as { render?: (w: number) => string[] }).render === "function"
@@ -82,4 +83,35 @@ test("renderCall shows a running header while partial, empty when done", () => {
 	assert.deepEqual(render(partial), [`${BOLD}webfetch${RESET} https://x.com`, `${INDENT}${DIM}fetching${RESET}`]);
 	const done = renderFetchCall({ url: "https://x.com" }, {}, { isPartial: false });
 	assert.deepEqual(render(done), []);
+});
+
+test("safeText strips untrusted ANSI/OSC/bidi from dynamic fields", () => {
+	const evil = "\x1b[31mEVIL\x1b[0m \x1b]8;;https://evil.example\x07CLICK\x1b]8;;\x07 \u202Eabc";
+	const c = renderFetchResult(
+		fetchResult({ title: evil, text: `# ${evil}\n\nbody ${evil}` }),
+		{ expanded: true, isPartial: false }, {},
+		{ args: { url: evil }, isError: false },
+	);
+	const lines = render(c);
+	const joined = lines.join("\n");
+	assert.ok(joined.includes("EVIL") && joined.includes("CLICK") && joined.includes("abc"));
+	for (const l of lines) {
+		assert.ok(!l.includes("\x1b[31m"), `injected SGR leaked: ${JSON.stringify(l)}`);
+		assert.ok(!l.includes("\x1b]"), `OSC leaked: ${JSON.stringify(l)}`);
+		assert.ok(!l.includes("\u202E"), `bidi override leaked: ${JSON.stringify(l)}`);
+	}
+});
+
+test("narrow width truncates each line without breaking ANSI", () => {
+	const c = renderFetchResult(
+		fetchResult({ title: "A very long title that exceeds the narrow width", text: "x".repeat(120) }),
+		{ expanded: true, isPartial: false }, {},
+		{ args: { url: "https://example.com/very/long/path" }, isError: false },
+	);
+	const lines = render(c, 20);
+	for (const l of lines) {
+		assert.ok(visibleWidth(l) <= 20, `line too wide (${visibleWidth(l)}): ${JSON.stringify(l)}`);
+		assert.ok(!l.includes("\x1b[0m"), `bare reset leaked: ${JSON.stringify(l)}`);
+	}
+	assert.ok(lines.some((l) => l.includes("…")), "expected at least one truncated line");
 });
