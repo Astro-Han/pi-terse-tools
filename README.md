@@ -1,8 +1,8 @@
 # pi-terse-tools
 
-A monorepo of lean, focused extensions for the [Pi coding agent](https://github.com/earendil-works/pi-coding-agent). Each package under `packages/` is independently installable and publishable.
+A monorepo of lean, focused extensions for the [Pi coding agent](https://github.com/earendil-works/pi-coding-agent). Each package under `packages/` is independently installable and publishable. The rendering stays close to pi's native TUI — same colors, backgrounds, and success/error states — just compressed to what matters.
 
-![pi-terse-tools rendering tool calls as two-line blocks](assets/screenshot.svg)
+![pi-terse-tools rendering tool calls as two-line blocks](assets/screenshot.png)
 
 ## Packages
 
@@ -35,6 +35,8 @@ pi -e npm:pi-terse-tools
 ```bash
 export EXA_API_KEY=...
 ```
+
+![pi-terse-web rendering websearch and webfetch results](assets/screenshot-web.png)
 
 See [`packages/web/README.md`](packages/web/README.md) for the design rationale and coexistence with `pi-web-access`.
 
