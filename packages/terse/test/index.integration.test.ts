@@ -61,33 +61,54 @@ test("execution does not inspect removed UI metadata", async () => {
 
 test("completed bash: input is on line1 and result is on line2", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["bash echo hi", "  ✓ hello world"]);
+});
+
+test("completed bash without output: success does not invent a preview", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult(""), { isPartial: false, expanded: false });
 	assert.deepEqual(lines, ["bash echo hi", "  ✓"]);
 });
 
 test("completed bash error: input is on line1 and failure is on line2", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("boom\nCommand exited with code 2"), { isPartial: false, expanded: false, isError: true });
+	assert.deepEqual(lines, ["bash echo hi", "  ✗ exit 2 boom"]);
+});
+
+test("completed bash error without output: failure does not invent a preview", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("Command exited with code 2"), { isPartial: false, expanded: false, isError: true });
 	assert.deepEqual(lines, ["bash echo hi", "  ✗ exit 2"]);
 });
 
 test("partial bash: input is on line1 and running is on line2", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: false });
-	assert.deepEqual(lines, ["bash echo hi", "  running"]);
+	assert.deepEqual(lines, ["bash echo hi", "  running hello world"]);
 });
 
 test("partial + expanded bash: running header then streamed body", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: true });
-	assert.deepEqual(lines, ["bash echo hi", "  running", "  hello", "  world"]);
+	assert.deepEqual(lines, ["bash echo hi", "  running hello world", "  hello", "  world"]);
 });
 
 test("completed + expanded bash: status header then body", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: true });
-	assert.deepEqual(lines, ["bash echo hi", "  ✓", "  hello", "  world"]);
+	assert.deepEqual(lines, ["bash echo hi", "  ✓ hello world", "  hello", "  world"]);
+});
+
+test("bash preview sanitizes terminal controls and bidi markers", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("\x1b[31mred\x1b[0m\nsafe\u202e"), { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["bash echo hi", "  ✓ red safe"]);
 });
 
 test("completed read: path is on line1 and size is on line2", () => {
 	const result = { content: [{ type: "text", text: "x\n".repeat(24) }] };
 	const lines = render(register()["read"], { path: "docs/models.md" }, result, { isPartial: false, expanded: false });
 	assert.deepEqual(lines, ["read docs/models.md", "  24 lines"]);
+});
+
+test("partial non-bash tools retain their specialized two-line layout", () => {
+	const result = { content: [{ type: "text", text: "streamed content" }] };
+	const lines = render(register()["read"], { path: "docs/models.md" }, result, { isPartial: true, expanded: false });
+	assert.deepEqual(lines, ["read docs/models.md", "  running"]);
 });
 
 test("completed grep: query is on line1 and match summary is on line2", () => {
@@ -99,7 +120,7 @@ test("completed grep: query is on line1 and match summary is on line2", () => {
 test("narrow width: line2 truncation keeps the leading status", () => {
 	const bash = register()["bash"];
 	const block = bash.renderResult(
-		bashResult("hi"),
+		bashResult("hello world from command"),
 		{ isPartial: false, expanded: false },
 		{},
 		{ args: { command: "echo hi --long-flag" }, isPartial: false, expanded: false },
@@ -109,4 +130,5 @@ test("narrow width: line2 truncation keeps the leading status", () => {
 		lines[1].trimStart().startsWith("✓"),
 		`expected leading ✓ preserved when truncated, got: ${lines[1]}`,
 	);
+	assert.ok(lines[1].endsWith("…"), `expected preview to truncate to width, got: ${lines[1]}`);
 });

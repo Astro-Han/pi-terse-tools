@@ -67,8 +67,10 @@ function summarize(name: string, r: any, err: boolean, a: Record<string, unknown
 			const lines = t.split("\n").filter(Boolean);
 			const last = lines[lines.length - 1] ?? "";
 			const m = last.match(/^Command exited with code (\d+)$/);
-			if (m) return `${RED}✗ exit ${m[1]}${RESET}`;
-			return `${RED}✗ ${last || "error"}${RESET}`;
+			const preview = oneLine(m ? lines.slice(0, -1).join(" ") : t);
+			const status = m ? `${RED}✗ exit ${m[1]}${RESET}` : `${RED}✗${RESET}`;
+			if (preview) return `${status} ${DIM}${preview}${RESET}`;
+			return m ? status : `${status} ${DIM}error${RESET}`;
 		}
 		return `${RED}✗ ${t.split("\n").find(Boolean) || "error"}${RESET}`;
 	}
@@ -94,7 +96,10 @@ function summarize(name: string, r: any, err: boolean, a: Record<string, unknown
 		}
 		return `${GREEN}+${add}${RESET}${DIM}/${RESET}${RED}-${del}${RESET}`;
 	}
-	if (name === "bash") return `${GREEN}✓${RESET}`;
+	if (name === "bash") {
+		const preview = oneLine(t);
+		return `${GREEN}✓${RESET}` + (preview ? ` ${DIM}${preview}${RESET}` : "");
+	}
 	if (name === "grep") {
 		if (t.trim() === "No matches found") return `${DIM}0 ${plural(0, "match", "matches")} / 0 ${plural(0, "file", "files")}${RESET}`;
 		const rows = t.split("\n").map((l) => l.match(/^([^:]+):(\d+):/)).filter(Boolean) as RegExpMatchArray[];
@@ -129,15 +134,22 @@ function buildBlock(
 	o: { err?: boolean; partial?: boolean; expanded?: boolean } = {},
 ): string[] {
 	const { err = false, partial = false, expanded = false } = o;
-	const summary = partial
-		? `${DIM}running${RESET}`
-		: summarize(name, r, err, a) + (truncated(r) ? ` ${DIM}truncated${RESET}` : "");
-	const detail = detailOf(name, a);
-	const line1 = `${BOLD}${name}${RESET} ${detail}`;
-	const line2 = `${INDENT}${summary}`;
-	const lines = [line1, line2];
+	const lines = [inputLine(name, a), resultLine(name, a, r, err, partial)];
 	if (expanded) lines.push(...expandedLines(name, a, r, err));
 	return lines;
+}
+
+function inputLine(name: string, args: Record<string, unknown>): string {
+	return `${BOLD}${name}${RESET} ${detailOf(name, args)}`;
+}
+
+function resultLine(name: string, args: Record<string, unknown>, result: any, err: boolean, partial: boolean): string {
+	if (partial) {
+		const preview = name === "bash" ? oneLine(safeText(textOf(result))) : "";
+		return `${INDENT}${DIM}running${RESET}` + (preview ? ` ${DIM}${preview}${RESET}` : "");
+	}
+	const summary = summarize(name, result, err, args) + (truncated(result) ? ` ${DIM}truncated${RESET}` : "");
+	return `${INDENT}${summary}`;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -154,19 +166,20 @@ export default function (pi: ExtensionAPI) {
 			renderShell: "default",
 			execute: async (id: string, p: any, sig: any, up: any, ctx: any) =>
 				factory(ctx?.cwd ?? process.cwd()).execute(id, p, sig, up, ctx),
-			// The call slot owns the running header while partial.
+			// While partial, Pi composes the input from the call slot with the
+			// live status and output preview from the result slot.
 			renderCall: (args: any, theme: any, ctx: any) => {
 				if (!ctx?.isPartial) return new Container();
-				return new TidyBlock(buildBlock(name, args ?? {}, {}, { partial: true }));
+				return new TidyBlock([inputLine(name, args ?? {})]);
 			},
-			// The result slot owns the summary when done, and the expanded body
-			// (including streamed partial output) when expanded.
+			// The result slot owns the status and the expanded body.
 			renderResult: (result: any, opts: any, theme: any, ctx: any) => {
 				if (opts?.isPartial) {
-					// While partial, the call slot already shows the running header, so
-					// the result slot only contributes the streamed body when expanded.
-					if (!opts?.expanded) return new Container();
-					return new TidyBlock(expandedLines(name, ctx?.args ?? {}, result, ctx?.isError ?? false));
+					const args = ctx?.args ?? {};
+					const err = ctx?.isError ?? false;
+					const lines = [resultLine(name, args, result, err, true)];
+					if (opts?.expanded) lines.push(...expandedLines(name, args, result, err));
+					return new TidyBlock(lines);
 				}
 				const err = ctx?.isError ?? false;
 				const lines = buildBlock(name, ctx?.args ?? {}, result, { err, expanded: opts?.expanded ?? false });

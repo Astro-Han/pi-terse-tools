@@ -1,7 +1,7 @@
 {
   "name": "pi-terse-tools",
-  "version": "0.3.0",
-  "description": "Compress every pi tool call into two lines: readable input, then a result summary.",
+  "version": "0.3.1",
+  "description": "Compress every pi tool call into two lines: readable input, then useful result output.",
   "license": "MIT",
   "author": "astrohan",
   "repository": {
