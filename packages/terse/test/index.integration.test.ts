@@ -2,6 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import piTerse from "../src/index.ts";
+import {
+	createBashToolDefinition,
+	createEditToolDefinition,
+	createFindToolDefinition,
+	createGrepToolDefinition,
+	createLsToolDefinition,
+	createReadToolDefinition,
+	createWriteToolDefinition,
+} from "@earendil-works/pi-coding-agent";
 
 const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*m/g, "");
 
@@ -20,49 +29,71 @@ const render = (tool: any, args: any, result: any, opts: { isPartial: boolean; e
 	return [...call, ...body].map(stripAnsi);
 };
 
-const bashArgs = { command: "echo hi", reasoning: "greet" };
+const bashArgs = { command: "echo hi" };
 const bashResult = (text: string) => ({ content: [{ type: "text", text }] });
 
-test("completed bash: status leads line2, detail follows, no arrow", () => {
+test("registered tools preserve the native parameter schemas", () => {
+	const tools = register();
+	const factories = {
+		read: createReadToolDefinition,
+		write: createWriteToolDefinition,
+		edit: createEditToolDefinition,
+		bash: createBashToolDefinition,
+		grep: createGrepToolDefinition,
+		find: createFindToolDefinition,
+		ls: createLsToolDefinition,
+	};
+	for (const [name, factory] of Object.entries(factories)) {
+		assert.deepEqual(tools[name].parameters, factory(process.cwd()).parameters, name);
+	}
+});
+
+test("execution does not inspect removed UI metadata", async () => {
+	const args = new Proxy({ path: "package.json" }, {
+		get(target, property, receiver) {
+			if (property === "reasoning") throw new Error("reasoning must not be inspected");
+			return Reflect.get(target, property, receiver);
+		},
+	});
+	const result = await register().read.execute("call", args, undefined, undefined, { cwd: process.cwd() });
+	assert.match(result.content[0].text, /"name": "pi-terse-/);
+});
+
+test("completed bash: input is on line1 and result is on line2", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: false });
-	assert.deepEqual(lines, ["bash greet", "  ✓ echo hi"]);
-});
-
-test("completed bash error: ✗ leads, exit code and detail follow", () => {
-	const lines = render(register()["bash"], bashArgs, bashResult("boom\nCommand exited with code 2"), { isPartial: false, expanded: false, isError: true });
-	assert.deepEqual(lines, ["bash greet", "  ✗ exit 2 echo hi"]);
-});
-
-test("completed bash without reasoning: line1 carries detail, line2 is status only", () => {
-	const lines = render(register()["bash"], { command: "echo hi" }, bashResult("hello"), { isPartial: false, expanded: false });
 	assert.deepEqual(lines, ["bash echo hi", "  ✓"]);
 });
 
-test("partial bash: running leads line2, detail follows", () => {
+test("completed bash error: input is on line1 and failure is on line2", () => {
+	const lines = render(register()["bash"], bashArgs, bashResult("boom\nCommand exited with code 2"), { isPartial: false, expanded: false, isError: true });
+	assert.deepEqual(lines, ["bash echo hi", "  ✗ exit 2"]);
+});
+
+test("partial bash: input is on line1 and running is on line2", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: false });
-	assert.deepEqual(lines, ["bash greet", "  running echo hi"]);
+	assert.deepEqual(lines, ["bash echo hi", "  running"]);
 });
 
 test("partial + expanded bash: running header then streamed body", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: true, expanded: true });
-	assert.deepEqual(lines, ["bash greet", "  running echo hi", "  hello", "  world"]);
+	assert.deepEqual(lines, ["bash echo hi", "  running", "  hello", "  world"]);
 });
 
 test("completed + expanded bash: status header then body", () => {
 	const lines = render(register()["bash"], bashArgs, bashResult("hello\nworld"), { isPartial: false, expanded: true });
-	assert.deepEqual(lines, ["bash greet", "  ✓ echo hi", "  hello", "  world"]);
+	assert.deepEqual(lines, ["bash echo hi", "  ✓", "  hello", "  world"]);
 });
 
-test("completed read: size summary leads line2, path follows, no arrow", () => {
+test("completed read: path is on line1 and size is on line2", () => {
 	const result = { content: [{ type: "text", text: "x\n".repeat(24) }] };
-	const lines = render(register()["read"], { path: "docs/models.md", reasoning: "check models" }, result, { isPartial: false, expanded: false });
-	assert.deepEqual(lines, ["read check models", "  24 lines docs/models.md"]);
+	const lines = render(register()["read"], { path: "docs/models.md" }, result, { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["read docs/models.md", "  24 lines"]);
 });
 
-test("completed grep: match summary leads line2, pattern follows", () => {
+test("completed grep: query is on line1 and match summary is on line2", () => {
 	const result = { content: [{ type: "text", text: "src/a.ts:3:foo\nsrc/b.ts:7:foo\nsrc/b.ts:9:foo" }] };
-	const lines = render(register()["grep"], { pattern: "foo", path: "src", reasoning: "find usage" }, result, { isPartial: false, expanded: false });
-	assert.deepEqual(lines, ["grep find usage", "  3 matches / 2 files foo in src"]);
+	const lines = render(register()["grep"], { pattern: "foo", path: "src" }, result, { isPartial: false, expanded: false });
+	assert.deepEqual(lines, ["grep foo in src", "  3 matches / 2 files"]);
 });
 
 test("narrow width: line2 truncation keeps the leading status", () => {
@@ -71,7 +102,7 @@ test("narrow width: line2 truncation keeps the leading status", () => {
 		bashResult("hi"),
 		{ isPartial: false, expanded: false },
 		{},
-		{ args: { command: "echo hi --long-flag", reasoning: "greet" }, isPartial: false, expanded: false },
+		{ args: { command: "echo hi --long-flag" }, isPartial: false, expanded: false },
 	);
 	const lines = block.render(12).map(stripAnsi);
 	assert.ok(

@@ -4,9 +4,7 @@ Lean extensions for the [Pi coding agent](https://github.com/earendil-works/pi-c
 
 ## `pi-terse-tools` — every tool call in two lines
 
-![pi-terse-tools rendering tool calls as two-line blocks](assets/screenshot.png)
-
-Pi's default tool output floods the transcript. This extension re-renders the built-in tools (read, write, edit, bash, grep, find, ls) as compact two-line blocks: the model's one-sentence intent on line 1, a colored result summary (✓ / ✗, diff stats, line counts) on line 2. Press `C-o` on a block to expand the full output.
+Pi's default tool output floods the transcript. This extension re-renders the built-in tools (read, write, edit, bash, grep, find, ls) as compact two-line blocks: readable tool input on line 1, a colored result summary (✓ / ✗, diff stats, line counts) on line 2. It leaves the model-facing tool schemas and execution arguments unchanged. Press `C-o` on a block to expand the full output.
 
 Install with pi's package manager (requires [pi](https://pi.dev) >= 0.80):
 

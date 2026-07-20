@@ -129,32 +129,15 @@ function buildBlock(
 	o: { err?: boolean; partial?: boolean; expanded?: boolean } = {},
 ): string[] {
 	const { err = false, partial = false, expanded = false } = o;
-	const { reasoning, rest } = strip(a);
-	const headText = oneLine(safeText(reasoning));
 	const summary = partial
 		? `${DIM}running${RESET}`
-		: summarize(name, r, err, rest) + (truncated(r) ? ` ${DIM}truncated${RESET}` : "");
-	const detail = detailOf(name, rest);
-	const line1 = `${BOLD}${name}${RESET} ${headText || detail}`;
-	const line2 = headText ? `${INDENT}${summary} ${DIM}${detail}${RESET}` : `${INDENT}${summary}`;
+		: summarize(name, r, err, a) + (truncated(r) ? ` ${DIM}truncated${RESET}` : "");
+	const detail = detailOf(name, a);
+	const line1 = `${BOLD}${name}${RESET} ${detail}`;
+	const line2 = `${INDENT}${summary}`;
 	const lines = [line1, line2];
-	if (expanded) lines.push(...expandedLines(name, rest, r, err));
+	if (expanded) lines.push(...expandedLines(name, a, r, err));
 	return lines;
-}
-
-// Put reasoning first for earlier streaming.
-function withReasoning(p: any): any {
-	const r = {
-		type: "string",
-		description: "State the call's purpose in one sentence, using the user's language. Use an empty string for obvious calls; don't repeat other arguments.",
-	};
-	const required = (p?.required ?? []).filter((name: string) => name !== "reasoning");
-	return { ...p, properties: { reasoning: r, ...(p?.properties ?? {}) }, required: ["reasoning", ...required] };
-}
-
-function strip(p: any): { reasoning?: string; rest: any } {
-	const { reasoning, ...rest } = p ?? {};
-	return { reasoning: typeof reasoning === "string" ? reasoning : undefined, rest };
 }
 
 export default function (pi: ExtensionAPI) {
@@ -168,10 +151,9 @@ export default function (pi: ExtensionAPI) {
 		const tool = factory(process.cwd());
 		pi.registerTool({
 			...tool,
-			parameters: withReasoning(tool.parameters),
 			renderShell: "default",
 			execute: async (id: string, p: any, sig: any, up: any, ctx: any) =>
-				factory(ctx?.cwd ?? process.cwd()).execute(id, strip(p).rest, sig, up, ctx),
+				factory(ctx?.cwd ?? process.cwd()).execute(id, p, sig, up, ctx),
 			// The call slot owns the running header while partial.
 			renderCall: (args: any, theme: any, ctx: any) => {
 				if (!ctx?.isPartial) return new Container();
@@ -184,8 +166,7 @@ export default function (pi: ExtensionAPI) {
 					// While partial, the call slot already shows the running header, so
 					// the result slot only contributes the streamed body when expanded.
 					if (!opts?.expanded) return new Container();
-					const { rest } = strip(ctx?.args ?? {});
-					return new TidyBlock(expandedLines(name, rest, result, ctx?.isError ?? false));
+					return new TidyBlock(expandedLines(name, ctx?.args ?? {}, result, ctx?.isError ?? false));
 				}
 				const err = ctx?.isError ?? false;
 				const lines = buildBlock(name, ctx?.args ?? {}, result, { err, expanded: opts?.expanded ?? false });

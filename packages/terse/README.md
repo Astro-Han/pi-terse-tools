@@ -1,14 +1,14 @@
 # pi-terse-tools
 
-Compress every pi tool call into a tight two-line block: intent on line 1, result summary on line 2.
+Compress every pi tool call into a tight two-line block: readable input on line 1, result summary on line 2.
 
 ```
-edit  confirm reasoning renders during the call
-  +6/-3 src/index.ts
-bash  run the typecheck
-  ✓ npx tsc --noEmit
-read  check the model registry
-  24 lines docs/models.md
+edit  src/index.ts
+  +6/-3
+bash  npx tsc --noEmit
+  ✓
+read  docs/models.md
+  24 lines
 ```
 
 Expand any block with `C-o` to see the full output, diff, or written content.
@@ -29,14 +29,14 @@ pi -e npm:pi-terse-tools
 
 Pi's default tool output is verbose and fills the transcript. This extension re-renders the seven built-in tools (read, write, edit, bash, grep, find, ls) as compact two-line blocks:
 
-- **Line 1** — tool name + a one-sentence `reasoning` the model provides (the *why*, not the *what*).
-- **Line 2** — a colored result summary (✓ / ✗ exit N / lines / matches / diff counts) + the target (path, command, pattern).
+- **Line 1** — tool name + its input in a readable form (path, command, or search query).
+- **Line 2** — a colored result summary (✓ / ✗ exit N / lines / matches / diff counts).
 
 The native tool background and padding are preserved, so success (green ✓) and error (red ✗) states still read at a glance. Long lines truncate cleanly with an ellipsis while keeping the leading summary visible.
 
-## Reasoning parameter
+## Protocol transparency
 
-Each tool gets a required `reasoning` string parameter. The model states the call's purpose in one sentence using your conversation language. Simple calls may pass an empty string; the block then falls back to showing the target on line 1. The `reasoning` is stripped before execution, so it never reaches the underlying tool.
+This extension only changes rendering. It preserves each built-in tool's native parameter schema and passes its arguments through without adding UI metadata, so installing it does not make tool calls more expensive or fragile for the model.
 
 ## Acknowledgements
 
